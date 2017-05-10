@@ -1,0 +1,286 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "McAfee Network Security Platform Security Group Creation for vNSP AWS Solution Deployment",
+  "Comment" : "Author: Vivek Stalin (vivek_stalin@mcafee.com). Copyright (c) 2017 McAfee Inc. - All Rights Reserved",
+  "Metadata": {
+    "AWS::CloudFormation::Interface": {
+      "ParameterGroups": [
+        {
+          "Label": {
+            "default": "vNSP Security Group Settings"
+          },
+          "Parameters": [
+      			"VPCID"
+          ]
+        }		
+      ],
+      "ParameterLabels": { 
+  		  "VPCID": {
+            "default": "Service VPC"
+          }
+        }
+	 }
+  },	
+  "Parameters": {
+   
+	"VPCID": {
+      "Description": "VPCID of your existing Service VPC in which Secutiry Groups have to be created",
+      "Type": "AWS::EC2::VPC::Id",
+	  "ConstraintDescription": "must be the ID of an existing VPC"
+    }
+  },
+  "Resources" : {
+  
+    "DemoSecurityGroupManager" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "McAfee NSP AWS Solution- NSP Manager Security Group",
+    	"Tags" : [ {"Key" : "Name", "Value" :"McAfeevNSPTestDriveManager"} ],
+        "VpcId" : 
+        	  {"Ref" : "VPCID"
+        	  },
+		"SecurityGroupIngress" : [
+                {
+      			"IpProtocol" : "tcp",
+      			"FromPort" : "3389",
+      			"ToPort" : "3389",
+                  "CidrIp" : "0.0.0.0/0"
+      			},
+      			{
+      			"IpProtocol" : "tcp",
+      			"FromPort" : "443",
+      			"ToPort" : "443",
+                "CidrIp" : "0.0.0.0/0"
+      			}
+				]
+	  }
+	},
+      
+
+
+    "DemoSecurityGroupController" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "McAfee NSP AWS Solution- NSP Controller Security Group",
+    	"Tags" : [ {"Key" : "Name", "Value" :"McAfeevNSPTestDriveController"} ],
+        "VpcId" : 
+        	  {"Ref" : "VPCID"
+        	  }
+        }
+      },
+	
+	
+	"DemoSecurityGroupTestVMGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "McAfee NSP AWS Solution- Test VM Group Security Group",
+    	"Tags" : [ {"Key" : "Name", "Value" :"McAfeevNSPTestDriveTestVM"} ],
+        "VpcId" : 
+        	  {"Ref" : "VPCID"
+        	  }
+        }
+      },
+	  
+	  
+	 "DemoSecurityGroupSensorMgmt" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "McAfee NSP AWS Solution- NSP Sensor Management Suubnet Security Group",
+    	"Tags" : [ {"Key" : "Name", "Value" :"McAfeevNSPTestDriveSensorMgmt"} ],
+        "VpcId" : 
+        	  {"Ref" : "VPCID"
+        	  }
+        }
+      },
+
+	  
+    "DemoSecurityGroupSensorData" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "McAfee NSP AWS Solution- NSP Sensor Data Sunbent Security Group",
+    	"Tags" : [ {"Key" : "Name", "Value" :"McAfeevNSPTestDriveSensorData"} ],
+        "VpcId" : 
+        	  {"Ref" : "VPCID"
+        	  }
+        }
+      },
+    
+	
+	"ManagerSGroup1Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "8510",
+             "FromPort" : "8504",
+             "GroupId": {"Ref": "DemoSecurityGroupManager"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupSensorMgmt" }
+			 }
+         },
+		 
+		 
+    "ManagerSGroup2Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "22",
+             "FromPort" : "22",
+             "GroupId": {"Ref": "DemoSecurityGroupManager"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupController" }
+			 }
+         },	
+		 
+    "ManagerSGroup3Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "443",
+             "FromPort" : "443",
+             "GroupId": {"Ref": "DemoSecurityGroupManager"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupController" }
+			 }
+         },			 
+	
+	"ControllerSGroup1Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "22",
+             "FromPort" : "22",
+             "GroupId": {"Ref": "DemoSecurityGroupController"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupManager" }
+			 }
+         },
+	
+	"ControllerSGroup2Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "443",
+             "FromPort" : "443",
+             "GroupId": {"Ref": "DemoSecurityGroupController"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupTestVMGroup" }
+			 }
+         },
+		 
+	"ControllerSGroup3Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "443",
+             "FromPort" : "443",
+             "GroupId": {"Ref": "DemoSecurityGroupController"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupSensorMgmt" }
+			 }
+         },
+		 
+	"ControllerSGroup4Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "443",
+             "FromPort" : "443",
+             "GroupId": {"Ref": "DemoSecurityGroupController"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupManager" }
+			 }
+         },
+		 
+    "SensorMgmtSGroup1Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "22",
+             "FromPort" : "22",
+             "GroupId": {"Ref": "DemoSecurityGroupSensorMgmt"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupManager" }
+			 }
+         },
+		 
+    "SensorMgmtSGroup2Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "8510",
+             "FromPort" : "8504",
+             "GroupId": {"Ref": "DemoSecurityGroupSensorMgmt"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupManager" }
+			 }
+         },
+
+    "SensorMgmtSGroup3Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "udp",
+             "ToPort" : "8500",
+             "FromPort" : "8500",
+             "GroupId": {"Ref": "DemoSecurityGroupSensorMgmt"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupManager" }
+			 }
+         },
+
+	"SensorMgmtSGroup4Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "443",
+             "FromPort" : "443",
+             "GroupId": {"Ref": "DemoSecurityGroupSensorMgmt"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupController" }
+			 }
+         },
+
+	"SensorDataSGroup1Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "9797",
+             "FromPort" : "9797",
+             "GroupId": {"Ref": "DemoSecurityGroupSensorData"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupTestVMGroup" }
+			 }
+         },
+		 
+	"TestVMSGroup1Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "80",
+             "FromPort" : "80",
+             "GroupId": {"Ref": "DemoSecurityGroupTestVMGroup"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupManager" }
+			 }
+         },	 
+	
+	"TestVMSGroup2Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "443",
+             "FromPort" : "443",
+             "GroupId": {"Ref": "DemoSecurityGroupTestVMGroup"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupManager" }
+			 }
+         },	 
+		 
+    "TestVMSGroup3Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "22",
+             "FromPort" : "22",
+             "GroupId": {"Ref": "DemoSecurityGroupTestVMGroup"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupManager" }
+			 }
+         },	 
+	
+	"TestVMSGroup4Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "9797",
+             "FromPort" : "9797",
+             "GroupId": {"Ref": "DemoSecurityGroupTestVMGroup"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupSensorData" }
+			 }
+         }  	
+  }
+}
