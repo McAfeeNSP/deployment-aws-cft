@@ -36,4 +36,4 @@ Use *CloudFormtaion* in AWS console to deploy the CFT files. Refer the [link](ht
 
 **Support**
 ------------
-This is a community project developed by contributions from the Network Security Platform team, but there is no official McAfee support for this project. Incase of any query or issues in deployment please mail vivek_stalin@mcafee.com
+This is a community project developed by contributions from the Network Security Platform team, but there is no official McAfee support for this project.
