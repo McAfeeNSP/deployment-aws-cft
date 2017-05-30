@@ -1,5 +1,19 @@
 /templates/McAfee_vNSP_TestDrive_CFT.json
   - This CFT is used for setting up complete vNSP AWS Solution for Demo/Test purpose
   - The AWS user has to access the CloudFormation tool via AWS console and upload this CFT file for deployment to begin
-  - Once the deployment is complete in CloudFormation. The user then acces the machines using its Public/Private IP
+  - Once the deployment is complete in CloudFormation. The user then access the machines using its Public/Private IP
     based on the security groups configured.
+  - You can send attacks in North-South traffic or East-West traffic to see the inspection and detection.
+    
+/templates/McAfee_vNSP_Service_deploymt_in_existing_NSM_CFT.json
+  - The CFT is exclusively developed for customer who already have vNSP Manager with existing cloud configurations
+  - Perform the same operation of going to the AWS CloudFormation tool using the AWS console and upload the file for deployment to begin
+  - Enter the existing vNSP Manager configurations and proceed further
+  - The complete vNSP solution would be deployed on your existing cloud infrastructure and is ready to protect your workloads.
+  
+/templates/McAfee_vNSP_Security_Groups_CFT.json
+  - This CFT will provision the recommended Security Group settings for deploying McAfee Network Security Platform into an existing Virtual Private Cloud (VPC)
+  - The AWS user must access the CloudFormation tool via AWS console and upload this CFT file for deployment to begin
+  - At the input parameters page choose in corresponding VPC-ID in which you need to create these security groups.
+  - There will be a better purpose of using this readily created Security Groups whenever any vNSP (Virtual McAfee Network Security Platform) Service Components are deployed into the VPC later.
+  - Once the deployment is complete you can then launch EC2 instances or vNSP Service components using this Security Groups.
