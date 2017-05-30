@@ -30,6 +30,10 @@ All documentation is available on [McAfee Knowledge Center](https://support.mcaf
 
 - [McAfee vNSP Solution for AWS Deployment Guide](https://kc.mcafee.com/corporate/index?page=content&id=PD26969)
 
+Usage Instructions
+------------------
+Use *CloudFormtaion* in AWS console to deploy the CFT files. Refer the [link](https://github.com/McAfeeNSP/deployment-aws-cft/blob/master/docs/CFT_Usage) here to understand the purpose and use of each CFT in /templates
+
 **Support**
 ------------
 This is a community project developed by contributions from the Network Security Platform team, but there is no official McAfee support for this project. Incase of any query or issues in deployment please mail vivek_stalin@mcafee.com
