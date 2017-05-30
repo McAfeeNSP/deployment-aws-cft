@@ -13,18 +13,22 @@ AWS CloudFormation simplifies provisioning and management on AWS. You can create
  
  The key features of vNSP CloudFormation Templates(CFT) are:
  
- **Automated Solution Deployment**: The entire McAfee vNSP solution can be deployed in single click using CFT's developed in favor of customers and demo user to perform end-to-end deployment and experience our solution in Amazon cloud
+ - **Automated Solution Deployment**: The entire McAfee vNSP solution can be deployed in single click using CFT's developed in favor of customers and demo user to perform end-to-end deployment and experience our solution in Amazon cloud
  
- **Customizable templates**: The templates provided here are open to the deployment environment and one can modify the template according to the existing network configuration in their cloud infrastructure. 
+ - **Customizable templates**: The templates provided here are open to the deployment environment and one can modify the template according to the existing network configuration in their cloud infrastructure. 
  
- **Existing configuration deployment**: Customer based solution deployment with existing vNSP Network Security Manager(NSM). The CFT provides a flexible way to input parameters about existing cloud configurations and performs deployment accordingly.
+ - **Existing configuration deployment**: Customer based solution deployment with existing vNSP Network Security Manager(NSM). The CFT provides a flexible way to input parameters about existing cloud configurations and performs deployment accordingly.
  
- **Creates better Security Configurations**: Reduces the risk of being breached in the public cloud by configuring tight security group configuration settings. It gives an option of configuring only the recommended services and ports settings automatically during the deployment.
+ - **Creates better Security Configurations**: Reduces the risk of being breached in the public cloud by configuring tight security group configuration settings. It gives an option of configuring only the recommended services and ports settings automatically during the deployment.
 
-**Demo templates**: Customers and users who wants to experience or try out the demo of our Network Security Solution can use CFT. The CFT's which is being engineered exlusive for Demo purpose will perform the deployment on one click. 
+- **Demo templates**: Customers and users who wants to experience or try out the demo of our Network Security Solution can use CFT. The CFT's which is being engineered exlusive for Demo purpose will perform the deployment on one click. 
 
 Getting Started & Documentation
 -------------------------------
 
 All documentation is available on [McAfee Knowledge Center](https://support.mcafee.com/).
 - [McAfee vNSP Solution for AWS Deployment Guide](https://kc.mcafee.com/corporate/index?page=content&id=PD26969)
+
+**Support**
+------------
+This is a community project developed by contributions from the Network Security Platform team, but there is no official McAfee support for this project. Incase of any query or issues in deployment please mail vivek_stalin@mcafee.com
