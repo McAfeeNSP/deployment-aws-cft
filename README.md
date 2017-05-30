@@ -13,7 +13,7 @@ AWS CloudFormation simplifies provisioning and management on AWS. You can create
  
  The key features of vNSP CloudFormation Templates(CFT) are:
  
- - **Automated Solution Deployment**: The entire McAfee vNSP solution can be deployed in single click in less than an hour using CFT's developed in favor of customers and demo users to protect their workloads in AWS cloud.
+ - **Automated Solution Deployment**: The entire McAfee vNSP solution can be deployed in single click in less than an hour using CFT's developed in favor of customers and users to protect their workloads in AWS cloud.
  
  - **Customizable templates**: The templates provided here are open to the deployment environment and one can modify the template according to the existing network configuration in their cloud infrastructure. 
  
