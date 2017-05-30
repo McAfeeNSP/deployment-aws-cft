@@ -1,1 +1,5 @@
-
+/templates/McAfee_vNSP_TestDrive_CFT.json
+  - This CFT is used for setting up complete vNSP AWS Solution
+  - The AWS user has to access the CloudFormation tool via AWS console and upload this CFT file for deployment to begin
+  - Once the deployment is complete in CloudFormation. The user can access then acces the machines using its Public/Private IP
+    based on the security group configuration.
