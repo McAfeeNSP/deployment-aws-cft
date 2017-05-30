@@ -1,0 +1,1034 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "McAfee Network Security Platform AWS Solution Deployment",
+  "Metadata": {
+    "AWS::CloudFormation::Interface": {
+      "ParameterGroups": [
+        {
+          "Label": {
+            "default": "Existing NSP Manager Configurations"
+          },
+          "Parameters": [
+		        "VPCID",
+				"NSMSubnetID",
+      			"NSMIP",
+				"NSMSG",
+				"NSMLogin",
+				"NSMPasswd",
+      			"PrivateSubnetCIDR",
+      			"ProtectedSubnetCIDR",
+				"RouteTableID"
+          ]
+        },	
+        {
+          "Label": {
+            "default": "McAfee NSP Controller Settings"
+          },
+          "Parameters": [
+      		  "ControllerSharedSecretKey",
+              "ControllerCloudAccessKey",
+              "ControllerCloudSecretKey",
+			  "OverlayNetworkSubnet"
+      		  ]
+        },
+    		{
+    		"Label": {
+                "default": "McAfee NSP Sensor Settings"
+              },
+              "Parameters": [
+          		  "ClusterName",
+				  "ClusterSecret"
+          		  ]
+        },
+		{
+    		"Label": {
+                "default": "Instance SSH Settings"
+              },
+              "Parameters": [
+          		  "KeyName"
+          		  ]
+        },
+		{
+    		"Label": {
+                "default": "McAfee NSP Sensor AutoScale - Launch Configuration Settings"
+              },
+              "Parameters": [
+				  "IAMInstanceProfile"
+          		  ]
+        },
+		{
+    		"Label": {
+                "default": "McAfee NSP Sensor AutoScale - Group Configuration Settings"
+              },
+              "Parameters": [
+				  "MaxSize"
+          		  ]
+        },
+		{
+    		"Label": {
+                "default": "McAfee NSP Sensor AutoScale Group - Alarm Configuration Settings"
+              },
+              "Parameters": [
+				  "AlarmThresholdUpper",
+				  "AlarmThresholdLower",
+				  "AlarmWatchPeriod"
+          		  ]
+        }
+      ],
+      "ParameterLabels": { 
+	      "VPCID": {
+            "default": "Service VPC"
+          },
+		  "NSMSubnetID": {
+            "default": "Service Management Subnet"
+          },
+  		  "NSMIP": {
+            "default": "NSP Manager IP"
+          },
+		  "NSMSG": {
+            "default": "Security Group of NSP Manager"
+          },
+		  "NSMLogin": {
+            "default": "NSP Manager Login Name"
+          },
+		  "NSMPasswd": {
+            "default": "NSP Manager Login Password"
+          },
+  		  "PrivateSubnetCIDR": {
+            "default": "Service Data Subnet"
+          },
+  		  "ProtectedSubnetCIDR": {
+            "default": "Protected VM Subnet"
+          },
+		  "RouteTableID": {
+            "default": "Route Table ID"
+          },
+  		  "ControllerSharedSecretKey": {
+            "default": "Controller-Manager Shared Secret Key"
+          },
+        "ControllerCloudAccessKey": {
+            "default": "Cloud Access Key"
+          },
+        "ControllerCloudSecretKey": {
+            "default": "Cloud Secret Key"
+          },
+		 "OverlayNetworkSubnet" : {
+            "default": "Controller Private Communication Subnet"
+          },
+  		  "ClusterName": {
+            "default": "ClusterName"
+          },
+		  "ClusterSecret": {
+            "default": "Cluster Secret Key"
+          },
+		   "KeyName":{
+		   "default": "Key Name"
+		 },
+		 "IAMInstanceProfile" : {
+			  "default": "IAM Instance Profile"
+		  },
+		 "MaxSize" : {
+			  "default": "Max Size"
+		  },
+		  "AlarmThresholdUpper" : {
+			  "default" : "CPU Average for Upper Threshold Alarm"
+		  },
+		  "AlarmThresholdLower" : {
+			  "default" : "CPU Average for Lower Threshold Alarm"
+		  },
+		  "AlarmWatchPeriod" : {
+			  "default" : "Alarm Monitoring Time Interval"
+		  }
+        }
+       }
+      },	
+  "Parameters": {
+   
+	"VPCID": {
+      "Description": "VPCID of your existing Service VPC where NSP Manager is running",
+      "Type": "AWS::EC2::VPC::Id",
+	  "ConstraintDescription": "must be the ID of an existing VPC"
+    },
+	  "NSMSubnetID": {
+      "Description": "Subnet-ID of your existing Management Subnet",
+	  "Type": "AWS::EC2::Subnet::Id",
+	   "ConstraintDescription": "must be the ID of an existing Subnet"
+     },
+	  "NSMIP": {
+      "Description": "Existing NSP Manager Private IP. Eg:10.30.10.50",
+      "Type": "String",
+      "AllowedPattern": "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$",
+      "ConstraintDescription": "Must be valid IPv4 address: X.X.X.X"
+    },
+	 "NSMSG": {
+      "Description": "Security Group attached to the NSP Manager. (Eg: sg-2c5a1357)",
+      "Type": "AWS::EC2::SecurityGroup::Id",
+      "ConstraintDescription": "Must be valid Security Group ID"
+    },
+	"NSMLogin": {
+      "Description": "Existing NSP Manager Login name. Eg:admin",
+      "Type": "String"
+
+    },
+	"NSMPasswd": {
+      "Description": "Existing NSP Manager Login password. Eg:admin_123",
+      "Type": "String",
+	  "NoEcho" : "true"
+    },
+	 "PrivateSubnetCIDR": {
+      "Description": "IPv4 CIDR for creating new Data Subnet. Eg:10.30.20.0/24",
+      "Type": "String",
+      "AllowedPattern": "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(/([0-9]|[1-2][0-9]|3[0-2]))$",
+      "ConstraintDescription": "Must be IPv4 CIDR notation: X.X.X.X/X"
+    },
+	  "ProtectedSubnetCIDR": {
+      "Description": "IPv4 CIDR for creating new Protected Subnet. Eg:10.30.30.0/24",
+      "Type": "String",
+      "AllowedPattern": "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(/([0-9]|[1-2][0-9]|3[0-2]))$",
+      "ConstraintDescription": "Must be IPv4 CIDR notation: X.X.X.X/X"
+    },
+	
+	"RouteTableID": {
+      "Description": "Input the RouteTableID of the existing Public Route Table in your Service VPC. The ID should start with \"rtb\" Eg: rtb-12345e (Note: Data Subnet and Protected VM Subnet will be associated to this route table, please make sure NAT gateway or Internet gatway is attached to the Service VPC)",
+      "Type": "String",
+	  "AllowedPattern" : "^rtb-\\w+",
+	  "ConstraintDescription": "must be the ID of an existing route table of the service VPC"
+    },
+	  "ControllerSharedSecretKey": {
+      "Description": "Shared key used for Controller-Manager registration",
+      "Type": "String",
+      "MinLength": "3",
+	  "NoEcho" : "true" 
+    },
+    "ControllerCloudAccessKey": {
+      "Description": "Your AWS Access Key",
+      "Type": "String",
+      "MinLength": "10",
+	  "NoEcho" : "true"
+    },
+    "ControllerCloudSecretKey": {
+      "Description": "Your AWS Secret Key",
+      "Type": "String",
+      "MinLength": "10",
+      "NoEcho" : "true"
+    },
+	
+	  "OverlayNetworkSubnet": {
+      "Description": "Controller internal communication subnet. Default:17.17.1.0/24",
+      "Type": "String",
+      "Default": "17.17.1.0/24",
+      "AllowedPattern": "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(/([0-9]|[1-2][0-9]|3[0-2]))$",
+      "ConstraintDescription": "Must be IPv4 CIDR notation: X.X.X.X/X"
+    },
+	  "ClusterName": {
+      "Description": "Name of the Cluster to be configured in the manager",
+      "Type": "String",
+      "MinLength": "3",
+	  "MaxLength" : "30"
+    },
+	"ClusterSecret": {
+      "Description": "Secret key for Manager-Sensor trust (Min 8 chars and Max 25 chars)",
+      "Type": "String",
+      "MinLength": "8",
+	  "MaxLength" : "25",
+	  "NoEcho" : "true"
+    },
+	"KeyName": {
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the EC2 Instance",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription": "must be the name of an existing EC2 KeyPair."
+    },
+	"MaxSize": {
+      "Description": "Maximum number of Sensor instances to be launched from the AutoScaling Group. (Must be number Eg: 10. Default is: 5 ; Maximum Allowed: 20)",
+      "Type": "String",
+	  "Default" : "5",
+	  "AllowedPattern" : "^([01]?\\d|20)$",
+	  "ConstraintDescription": "must be a valid number and the Max Size value should be less than or equal to 20"
+    },	
+	"IAMInstanceProfile": {
+      "Description": "Enter the valid IAM instance role for the sensor lacuh configuration. Eg: AttachEIP",
+      "Type": "String"
+    },	
+	"AlarmThresholdUpper" : {
+		   "Description": "Average CPU Utilization for Upper Threshold Alarm in Percentage. (Must be number Eg: 30 and < 100)",
+           "Type": "String",
+		   "AllowedPattern" : "^[0-9]?[0-9]{1}$|^100$",
+		   "Default" : "70",
+           "ConstraintDescription": "must be a valid number and the Threshold value should be less than or equal to 100"
+    },
+	"AlarmThresholdLower" : {
+		   "Description": "Average CPU Utilization for Lower Threshold Alarm in Percentage. (Must be number Eg: 15 and < 100)",
+           "Type": "String",
+		   "AllowedPattern" : "^[0-9]?[0-9]{1}$|^100$",
+		   "Default" : "30",
+           "ConstraintDescription": "must be a valid number and the Threshold value should be less than or equal to 100"
+	},
+	"AlarmWatchPeriod" : {
+			"Description": "Sensor Monitoring Timer Interval (specify a time in seconds that is also a multiples of 60. Default is 300s)",
+            "Type": "String",
+		    "AllowedPattern" : "\\d+",
+			"Default" : "300",
+            "ConstraintDescription": "must be a valid Number.Enter time in seconds that is also a multiple of 60"
+    }
+  },
+
+  "Mappings" : {
+    "TemplateMap" : {  
+      "us-west-2": {
+		"ControllerAMI" : "ami-6e0f860e",
+        "SensorAMI": "ami-49b8dc29",
+		"AutoInstance" : "ami-e01d8280"
+        },
+	"ap-southeast-2": {
+		"ControllerAMI" : "ami-b91719da",
+        "SensorAMI": "ami-c64652a5",
+		"AutoInstance" : "ami-22c1f141"
+        },
+	"us-east-1": {
+        "ControllerAMI" : "ami-b79bdca1",
+        "SensorAMI": "ami-a08fc8b6",
+		"AutoInstance" : "ami-79f66d6f"
+        }	
+    }
+  },
+  "Resources" : {
+		
+    "DemoPrivateSubnet": {
+       "Type": "AWS::EC2::Subnet",
+       "Properties" : {
+         "CidrBlock" : {"Ref":"PrivateSubnetCIDR"},
+		 "AvailabilityZone" : {"Fn::Select" : [ "0", { "Fn::GetAZs" : "" } ]},
+		 "Tags" : [ {"Key" : "Name", "Value" :{ "Fn::Join" : ["",[{"Ref" : "AWS::StackName"},"PrivateSubnet"]]}}],
+          "VpcId": {
+              "Ref": "VPCID"
+            }
+        }
+      },
+		
+	  "DemoProtectedSubnet": {
+       "Type": "AWS::EC2::Subnet",
+       "Properties" : {
+         "CidrBlock" : {"Ref":"ProtectedSubnetCIDR"},
+		 "AvailabilityZone" : {"Fn::Select" : [ "0", { "Fn::GetAZs" : "" } ]},
+		  "Tags" : [ {"Key" : "Name", "Value" :{ "Fn::Join" : ["",[{ "Ref" : "AWS::StackName" },"ProtectedSubnet"]]}} ],
+         "VpcId": {
+          "Ref": "VPCID"
+            },
+		      "MapPublicIpOnLaunch": "True"
+        }
+      },
+	
+	
+  	"DemoPrivateSubnetRouteTableAssociation": {
+        "Type": "AWS::EC2::SubnetRouteTableAssociation",
+        "Properties": {
+          "SubnetId": {
+            "Ref": "DemoPrivateSubnet"
+          },
+          "RouteTableId": {
+            "Ref": "RouteTableID"
+          }
+        }
+      },
+	
+  	"DemoProtectedSubnetRouteTableAssociation": {
+        "Type": "AWS::EC2::SubnetRouteTableAssociation",
+        "Properties": {
+          "SubnetId": {
+            "Ref": "DemoProtectedSubnet"
+          },
+          "RouteTableId": {
+            "Ref": "RouteTableID"
+          }
+        }
+      }, 
+  
+	
+	"DemoSecurityGroupManager" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "McAfee NSP AWS Solution- NSP Manager Security Group",
+    	"Tags" : [ {"Key" : "Name", "Value" :{ "Fn::Join" : ["",[{ "Ref" : "AWS::StackName" },"ManagerSG"]]}} ],
+        "VpcId" : 
+        	  {"Ref" : "VPCID"
+        	  },
+		"SecurityGroupIngress" : [
+                {
+      			"IpProtocol" : "tcp",
+      			"FromPort" : "3389",
+      			"ToPort" : "3389",
+                  "CidrIp" : "0.0.0.0/0"
+      			},
+      			{
+      			"IpProtocol" : "tcp",
+      			"FromPort" : "443",
+      			"ToPort" : "443",
+                "CidrIp" : "0.0.0.0/0"
+      			}
+				]
+	  }
+	},
+      
+
+
+    "DemoSecurityGroupController" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "McAfee NSP AWS Solution- NSP Controller Security Group",
+    	"Tags" : [ {"Key" : "Name", "Value" :{ "Fn::Join" : ["",[{ "Ref" : "AWS::StackName" },"ControllerSG"]]}} ],
+        "VpcId" : 
+        	  {"Ref" : "VPCID"
+        	  }
+        }
+      },
+	
+	
+	"DemoSecurityGroupTestVMGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "McAfee NSP AWS Solution- Test VM Group Security Group",
+    	"Tags" : [ {"Key" : "Name", "Value" :{ "Fn::Join" : ["",[{ "Ref" : "AWS::StackName" },"VMSG"]]}} ],
+        "VpcId" : 
+        	  {"Ref" : "VPCID"
+        	  }
+        }
+      },
+	  
+	  
+	 "DemoSecurityGroupSensorMgmt" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "McAfee NSP AWS Solution- NSP Sensor Management Suubnet Security Group",
+    	"Tags" : [ {"Key" : "Name", "Value" :{ "Fn::Join" : ["",[{ "Ref" : "AWS::StackName" },"SensorMgmtSG"]]}} ],
+        "VpcId" : 
+        	  {"Ref" : "VPCID"
+        	  }
+        }
+      },
+
+	  
+    "DemoSecurityGroupSensorData" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "McAfee NSP AWS Solution- NSP Sensor Data Sunbent Security Group",
+    	"Tags" : [ {"Key" : "Name", "Value" :{ "Fn::Join" : ["",[{ "Ref" : "AWS::StackName" },"SensorDataSG"]]}} ],
+        "VpcId" : 
+        	  {"Ref" : "VPCID"
+        	  }
+        }
+      },
+    
+	
+	"ManagerSGroup1Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "8510",
+             "FromPort" : "8504",
+             "GroupId": {"Ref": "DemoSecurityGroupManager"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupSensorMgmt" }
+			 }
+         },
+		 
+	"ManagerSGroup2Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "22",
+             "FromPort" : "22",
+             "GroupId": {"Ref": "DemoSecurityGroupManager"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupSensorMgmt" }
+			 }
+         },	  
+	
+	"ManagerSGroup3Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "22",
+             "FromPort" : "22",
+             "GroupId": {"Ref": "DemoSecurityGroupManager"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupTestVMGroup" }
+			 }
+	    },	 
+	"ManagerSGroupEx1Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "8510",
+             "FromPort" : "8504",
+             "GroupId": {"Ref": "NSMSG"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupSensorMgmt" }
+			 }
+         },
+	"ManagerSGroupEx2Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "22",
+             "FromPort" : "22",
+             "GroupId": {"Ref": "NSMSG"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupController" }
+			 }
+         },	 
+		 
+    "ControllerSGroup1Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "22",
+             "FromPort" : "22",
+             "GroupId": {"Ref": "DemoSecurityGroupController"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupManager" }
+			 }
+         },
+	
+	"ControllerSGroup2Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "443",
+             "FromPort" : "443",
+             "GroupId": {"Ref": "DemoSecurityGroupController"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupTestVMGroup" }
+			 }
+         },
+		 
+	"ControllerSGroup3Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "443",
+             "FromPort" : "443",
+             "GroupId": {"Ref": "DemoSecurityGroupController"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupSensorMgmt" }
+			 }
+         },
+		 
+	"ControllerSGroup4Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "443",
+             "FromPort" : "443",
+             "GroupId": {"Ref": "DemoSecurityGroupController"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupManager" }
+			 }
+         },
+	
+	"ControllerSGroupEx1Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "22",
+             "FromPort" : "22",
+             "GroupId": {"Ref": "DemoSecurityGroupController"},
+			 "SourceSecurityGroupId":{ "Ref": "NSMSG" }
+			 }
+         },
+		 
+	"ControllerSGroupEx2Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "443",
+             "FromPort" : "443",
+             "GroupId": {"Ref": "DemoSecurityGroupController"},
+			 "SourceSecurityGroupId":{ "Ref": "NSMSG" }
+			 }
+         },	 
+		 
+    "SensorMgmtSGroup1Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "22",
+             "FromPort" : "22",
+             "GroupId": {"Ref": "DemoSecurityGroupSensorMgmt"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupManager" }
+			 }
+         },
+		 
+    "SensorMgmtSGroup2Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "8510",
+             "FromPort" : "8504",
+             "GroupId": {"Ref": "DemoSecurityGroupSensorMgmt"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupManager" }
+			 }
+         },
+
+    "SensorMgmtSGroup3Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "udp",
+             "ToPort" : "8500",
+             "FromPort" : "8500",
+             "GroupId": {"Ref": "DemoSecurityGroupSensorMgmt"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupManager" }
+			 }
+         },
+
+	"SensorMgmtSGroup4Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "443",
+             "FromPort" : "443",
+             "GroupId": {"Ref": "DemoSecurityGroupSensorMgmt"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupController" }
+			 }
+         },
+
+	"SensorMgmtSGroupEx1Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "22",
+             "FromPort" : "22",
+             "GroupId": {"Ref": "DemoSecurityGroupSensorMgmt"},
+			 "SourceSecurityGroupId":{ "Ref": "NSMSG" }
+			 }
+         },
+		 
+    "SensorMgmtSGroup2Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "8510",
+             "FromPort" : "8504",
+             "GroupId": {"Ref": "DemoSecurityGroupSensorMgmt"},
+			 "SourceSecurityGroupId":{ "Ref": "NSMSG" }
+			 }
+         },
+
+    "SensorMgmtSGroup3Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "udp",
+             "ToPort" : "8500",
+             "FromPort" : "8500",
+             "GroupId": {"Ref": "DemoSecurityGroupSensorMgmt"},
+			 "SourceSecurityGroupId":{ "Ref": "NSMSG" }
+			 }
+         },
+		 
+	"SensorDataSGroup1Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "9797",
+             "FromPort" : "9797",
+             "GroupId": {"Ref": "DemoSecurityGroupSensorData"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupTestVMGroup" }
+			 }
+         },
+		 
+	"TestVMSGroup1Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "80",
+             "FromPort" : "80",
+             "GroupId": {"Ref": "DemoSecurityGroupTestVMGroup"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupManager" }
+			 }
+         },	 
+	
+	"TestVMSGroup2Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "443",
+             "FromPort" : "443",
+             "GroupId": {"Ref": "DemoSecurityGroupTestVMGroup"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupManager" }
+			 }
+         },	 
+		 
+    "TestVMSGroup3Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "22",
+             "FromPort" : "22",
+             "GroupId": {"Ref": "DemoSecurityGroupTestVMGroup"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupManager" }
+			 }
+         },	 
+	
+	"TestVMSGroup4Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "9797",
+             "FromPort" : "9797",
+             "GroupId": {"Ref": "DemoSecurityGroupTestVMGroup"},
+			 "SourceSecurityGroupId":{ "Ref": "DemoSecurityGroupSensorData" }
+			 }
+         },	
+	
+	"TestVMSGroupEx1Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "80",
+             "FromPort" : "80",
+             "GroupId": {"Ref": "DemoSecurityGroupTestVMGroup"},
+			 "SourceSecurityGroupId":{ "Ref": "NSMSG" }
+			 }
+         },	 
+	
+	"TestVMSGroupEx2Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "443",
+             "FromPort" : "443",
+             "GroupId": {"Ref": "DemoSecurityGroupTestVMGroup"},
+			 "SourceSecurityGroupId":{ "Ref": "NSMSG" }
+			 }
+         },	 
+		 
+    "TestVMSGroupEx3Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "22",
+             "FromPort" : "22",
+             "GroupId": {"Ref": "DemoSecurityGroupTestVMGroup"},
+			 "SourceSecurityGroupId":{ "Ref": "NSMSG" }
+			 }
+         },	 
+	
+
+	"DemoAutoInstance" : {
+      "Type" : "AWS::EC2::Instance",
+	  "DependsOn" : "TestVMSGroup4Ingress",
+	  "Metadata" : {
+        "AWS::CloudFormation::Init" : {
+          "config" : {
+            "files" : {
+              "/home/ubuntu/demodata.txt" : {
+                "content" : { "Fn::Join" : ["", [
+				  "VPC_ID=", {"Ref":"VPCID"}, "\n",
+				  "NSM_SUBNET=",{"Ref":"NSMSubnetID"},"\n",
+				  "ISM_IP=",{"Ref":"NSMIP"}, "\n",
+                  "API_ISM_USERNAME=",{"Ref":"NSMLogin"} , "\n",
+                  "API_ISM_PASSWD=",{"Ref":"NSMPasswd"} , "\n",
+                  "CONTROLLER_NAME=",{"Ref" : "AWS::StackName"},"Controller", "\n",
+                  "CONTROLLER_SECRET=",{"Ref":"ControllerSharedSecretKey"}, "\n",
+                  "CONTROLLER_SUBNET=",{"Ref" : "OverlayNetworkSubnet"}, "\n",
+                  "CONTROLLER_CLOUD_REGION=", { "Ref" : "AWS::Region" }, "\n",
+                  "CONTROLLER_CLOUD_ACCESSKEY=", {"Ref":"ControllerCloudAccessKey"}, "\n",
+                  "CONTROLLER_CLOUD_SECRET=", {"Ref":"ControllerCloudSecretKey"}, "\n",
+                  "CLUSTER_NAME=", {"Ref":"ClusterName"}, "\n",
+                  "CLUSTER_SECRET=",{"Ref":"ClusterSecret"}, "\n",
+                  "STACK_NAME=", { "Ref" : "AWS::StackName" }, "\n",
+                  "CONTROLLER_WAIT_HANDLE=", { "Fn::Base64" : { "Ref" : "ControllerCreationWaitHandle" }}, "\n",
+                  "CLUSTER_WAIT_HANDLE=", { "Fn::Base64" : { "Ref" : "ClusterCreationWaitHandle" }}, "\n"
+                  ]]}
+              },
+			   "/home/ubuntu/Sensor_intf.txt" : {
+                "content" : { "Fn::Join" : ["", [
+				 "[\n",
+				 "{\n",
+				 "\"DeviceIndex\": 0,\n",
+				 "\"SubnetId\":","\"",{"Ref" : "NSMSubnetID"},"\",","\n",
+				 "\"Groups\": [\"",{"Ref" : "DemoSecurityGroupSensorMgmt"},"\"]","\n" ,
+				 "},","\n",
+				 "{\n",
+				 "\"DeviceIndex\": 1,\n",
+				 "\"SubnetId\":","\"",{"Ref" : "DemoPrivateSubnet"},"\",","\n",
+				 "\"Groups\": [\"",{"Ref" : "DemoSecurityGroupSensorData"},"\"]","\n" ,
+				 "}","\n",
+				 "]"
+                  ]]}
+              },
+			  "/home/ubuntu/sensor_script.sh" : {
+                "content" : { "Fn::Join" : ["", [
+				 "#!/bin/sh\n",
+				 "sudo echo \"Downloading the script file and installing dependency packages for executing NSM API commands\"\n",
+				 "wget --directory-prefix=/home/ubuntu https://s3.amazonaws.com/nsmapiscripts/testdrive.sh\n",
+				 "wget --directory-prefix=/home/ubuntu https://s3.amazonaws.com/nsmapiscripts/createCluster.pyc\n",
+				 "sudo easy_install jsonpickle\n",
+				 "sudo su -\n",
+				 "cd /home/ubuntu\n",
+				 "sudo touch temp.sh\n",
+				 "sudo chmod 777 /home/ubuntu/*\n",
+				 "cd /home/ubuntu\n",
+				 "sudo chmod 400 ",{"Ref" : "AWS::StackName"},"SensorAMI1KP.pem","\n",
+				 "sensor_instance_ID=$(sudo -u ubuntu cat sensor_1_launch.tmp | grep \"InstanceId\" | awk -F \":\" '{print $2}'| sed 's/\"//g' | sed 's/,//g' | sed 's/ //g')\n",
+				 "sudo echo \"Sensor 1 instance ID is: $sensor_instance_ID\"\n",
+				 "cd /home/ubuntu\n",
+				 "NSM_octet=$(sudo echo \"", {"Ref" : "NSMIP"},"\" | cut -d . -f 1,2,3)\n",
+				 "sensor_ip=$(sudo -u ubuntu cat sensor_1_launch.tmp | grep \"\\\"PrivateIpAddress\\\":\" | grep $NSM_octet | sed -n 1p | awk -F \":\" '{print $2}'| sed 's/\"//g' | sed 's/,//g' | sed  's/ //g')\n",
+				 "sudo echo \"Sensor 1 instance IP is: $sensor_ip\"\n",
+				 "sudo echo -e '#!/usr/bin/expect\\nset timeout 60\\nspawn ssh -i \"",{"Ref" : "AWS::StackName"},"SensorAMI1KP.pem",
+				      "\" admin@'$sensor_ip'\\nexpect {\\n\"password:\" {\\nsend \"admin123\\\\r\"\\nexp_continue\\n}\\n\"(yes/no)?\" {\\nsend \"yes\\\\r\"\\nexp_continue\\n}\\n}\\nexpect \":\"\\nsend \"",
+					     {"Ref":"ClusterSecret"},"\\\\r\"\\nexpect \":\"\\nsend \"",{"Ref":"ClusterSecret"},"\\\\r\"\\nexpect \">\"\\nsend \"exit\\\\r\"\\ninteract' > ./temp.sh\n",
+				 "sudo cat temp.sh\n",
+				 "./temp.sh\n",
+				 "sudo echo \"done executing sensor script\"\n"			 
+                  ]]}
+              },
+			  "/home/ubuntu/LC_userdata.txt" : {
+                "content" : { "Fn::Join" : ["", [
+				 "{",
+				 "\"","NSM Data","\"",":","[",
+				 "\n",
+				 "{","\"","NSM IP","\"",":","\"",{"Ref":"NSMIP"},"\"",",",
+				 "\n","\"","Cluster Name","\"",":","\"",{"Ref":"ClusterName"},"\"","}","\n","],","\n",
+				 "\"dataSubnet\""," : ","\"",{"Ref" : "DemoPrivateSubnet"},"\"",",","\n",
+				 "\"dataSecurityGroups\""," : ","\"",{"Ref" : "DemoSecurityGroupSensorData"},"\"","\n",
+				 "}" 
+                  ]]}
+              }
+            }
+          }
+        }
+      },
+      "Properties" : {
+		"ImageId" : { "Fn::FindInMap" : [ "TemplateMap", { "Ref" : "AWS::Region" }, "AutoInstance" ]},
+        "Tags" : [ {"Key" : "Name", "Value" :{ "Fn::Join" : ["",[{ "Ref" : "AWS::StackName" },"AutoInstance"]]}} ],
+		"InstanceType" : "m4.large",
+		"NetworkInterfaces": [{
+          "AssociatePublicIpAddress": "true",
+          "DeviceIndex": "0",
+  		  "GroupSet": [{ "Ref" : "NSMSG" }],
+          "SubnetId": { "Ref" : "NSMSubnetID" }
+          } ],
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+		
+		     "#!/bin/sh\n",
+			 "sudo apt-get update && sudo apt-get upgrade -y\n",	
+			 "sudo apt-get -y install python-setuptools\n",
+			 "sudo apt-get -y install expect\n",			 
+			 "sudo easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\n",
+			 "sudo cfn-init -s ", { "Ref" : "AWS::StackName" }," -r DemoAutoInstance"," --region ",{ "Ref" : "AWS::Region" },"\n",
+			 "sudo sleep 15\n",
+			 "sudo chmod 777 /home/ubuntu/*\n",
+			 "cd /home/ubuntu\n",
+		   	 "sudo apt-get install -y awscli\n",		   
+			 "aws --version\n",
+			 "cd /home/ubuntu\n",
+			 "sudo rm -rf .aws\n",
+			 "sudo mkdir .aws\n",
+			 "sudo touch .aws/config\n",
+			 "sudo chmod 777 .aws/config\n",
+			 "sudo echo -e ","\"[default]\\naws_access_key_id=",{"Ref":"ControllerCloudAccessKey"},"\\naws_secret_access_key=",{"Ref":"ControllerCloudSecretKey"},"\\nregion=",{"Ref":"AWS::Region"},"\\noutput=json","\"", " > .aws/config\n",
+			 "sudo cp -r .aws/ /root/\n",
+			 "sudo echo \"Creating Key Pair for Sensor AMI1 instance...\"\n",
+			 "sudo -u ubuntu aws ec2 create-key-pair --key-name ",{"Ref" : "AWS::StackName"},"SensorAMI1KP",
+			     " --query 'KeyMaterial' --output text > ",{"Ref" : "AWS::StackName"},"SensorAMI1KP.pem","\n",
+			 "sudo chmod 400 ",{"Ref" : "AWS::StackName"},"SensorAMI1KP.pem","\n",
+			 "sudo echo \"Launching instance from Sensor AMI 1...\"\n",
+			 "sudo -u ubuntu aws ec2 run-instances --image-id ",{ "Fn::FindInMap" : [ "TemplateMap", { "Ref" : "AWS::Region" }, "SensorAMI" ]},
+			      " --count 1 "," --instance-type c4.xlarge",
+				  " --placement AvailabilityZone=",{"Fn::Select" : [ "0", { "Fn::GetAZs" : "" } ]},
+				  " --key-name ",{"Ref" : "AWS::StackName"},"SensorAMI1KP",
+				  " --network-interfaces file:///home/ubuntu/Sensor_intf.txt "," > sensor_1_launch.tmp","\n",		  
+			 "sudo sleep 10\n",
+			 "sensor_1_instance_ID=$(sudo cat sensor_1_launch.tmp| grep \"InstanceId\" | awk -F \":\" '{print $2}'| sed 's/\"//g' | sed 's/,//g' | sed 's/ //g')\n",
+			 "sudo -u ubuntu aws ec2 create-tags --resources ","$sensor_1_instance_ID"," --tags Key=Name,Value=",{ "Fn::Join" : ["",[{ "Ref" : "AWS::StackName" },"SensorAMI1"]]},"\n",
+			 "exp_val=\"running\"\n",
+             "for i in $(seq 11)\n",
+             "do\n",
+			 "  Status=$(sudo -u ubuntu aws ec2 describe-instances --instance-ids $sensor_1_instance_ID | grep \"\\\"Name\\\":\" | awk -F \":\" '{print $2}' | sed  s'/\"//g' | sed s'/ //g' | sed s'/,//g')\n",
+             "  echo \"current status of instance is: $Status\"\n",
+			 "  if [ $i -eq 11 ]\n",
+			 "  then\n",
+			 "    echo \"Max time 5 mins reached instance status has still not come to running\"\n",
+			 "    break\n",
+			 "  fi\n",
+			 "  if [ $Status = $exp_val ]\n",
+			 "  then\n",
+			 "    echo \"instance status is: running\"\n",
+			 "    break\n",
+			 "  else\n",
+             "    echo \"instance status is still not come to running. Sleeping for 30 seconds\"\n",
+             "    sleep 30\n",
+             "  fi\n",
+             "done\n",
+			 "sleep 300\n",
+			 "sudo echo \"Running sensor script...\"\n",
+			 "sudo sh sensor_script.sh\n",
+			 "sudo sleep 10\n",	 
+			 "sudo echo \"sensor_1_instance is running now\"\n",
+			 "sensor_2_ami=$(sudo -u ubuntu aws ec2 create-image --instance-id ","$sensor_1_instance_ID"," --name \"",{"Ref" : "AWS::StackName"},"SensorAMI2\" --description \"Sensor AMI2 with registered cluster shared secret\" | awk -F \":\" '{print $2}'| sed 's/\"//g'| sed 's/}//g' | sed  's/ //g')","\n",
+			 "exp_val=\"available\"\n",
+             "for i in $(seq 11)\n",
+             "do\n",
+			 "  Status=$(sudo -u ubuntu aws ec2 describe-images  --image-ids $sensor_2_ami | grep \"State\" | awk -F \":\" '{print $2}' | sed  s'/\"//g' | sed s'/ //g' | sed s'/,//g')\n",
+             "  echo \"current status of image is: $Status\"\n",
+			 "  if [ $i -eq 11 ]\n",
+			 "  then\n",
+			 "    echo \"Max time 5 mins reached image status has still not come to availble\"\n",
+			 "    break\n",
+			 "  fi\n",
+			 "  if [ $Status = $exp_val ]\n",
+			 "  then\n",
+			 "    echo \"image status is: available\"\n",
+			 "    break\n",
+			 "  else\n",
+             "    echo \"image status is still not available. Sleeping for 30 seconds\"\n",
+             "    sleep 30\n",
+             "  fi\n",
+             "done\n",
+			 "sudo echo \"sensor_2_ami is $sensor_2_ami and is available now\"\n",
+			 "sudo echo \"Deleting Key Pair of Sensor AMI1 instance...\"\n",
+			 "sudo -u ubuntu aws ec2 delete-key-pair --key-name ",{"Ref" : "AWS::StackName"},"SensorAMI1KP","\n",
+			 "sudo echo \"Creating AutoScale - Launching Configuration with Sensor AMI 2...\"\n",
+			 "sudo -u ubuntu aws autoscaling create-launch-configuration --launch-configuration-name ",{"Ref" : "AWS::StackName"},"LaunchConfig"," --image-id ","$sensor_2_ami"," --instance-type c4.xlarge",
+			 " --user-data file:///home/ubuntu/LC_userdata.txt"," --key-name ",{"Ref":"KeyName"}," --associate-public-ip-address --security-groups ",{"Ref":"DemoSecurityGroupSensorMgmt"}," --iam-instance-profile ",{"Ref" : "IAMInstanceProfile"},"\n",
+			 "sudo sleep 10\n",
+			 "sudo echo \"Job Done. Terminating Sensor Instance 1...\"\n",
+			 "sudo -u ubuntu aws ec2 terminate-instances --instance-ids ","$sensor_1_instance_ID"," --region ",{ "Ref" : "AWS::Region" },"\n",
+			 "sudo echo \"Calling NSM API config script...\"\n",
+			 "sudo sh testdrive.sh\n", 	
+			 "sudo rm -rf sensor_script.sh temp.sh LC_userdata.txt\n",
+			 "sudo echo \"Job Done. Terminating this AutoInstance from itself...\"\n",
+             "sudo -u ubuntu aws ec2 terminate-instances --instance-ids ","$(curl http://169.254.169.254/latest/meta-data/instance-id/)"," --region ",{ "Ref" : "AWS::Region" },"\n"
+          ]]}},
+		  "KeyName": { "Ref": "KeyName" }
+       }
+    },
+	
+	"ControllerCreationWaitHandle" : {
+      "Type" : "AWS::CloudFormation::WaitConditionHandle"
+    },
+
+   "ControllerCreationWaitCondition" : {
+      "Type" : "AWS::CloudFormation::WaitCondition",
+      "DependsOn" : "DemoAutoInstance",
+      "Properties" : {
+        "Handle" : {"Ref" : "ControllerCreationWaitHandle"},
+        "Timeout" : "3600"
+      }
+    },   
+	
+   "DemoControllerInstance" : {
+      "Type" : "AWS::EC2::Instance",
+	  "DependsOn" : "ControllerCreationWaitCondition",
+      "Properties" : {
+        "ImageId" : { "Fn::FindInMap" : [ "TemplateMap", { "Ref" : "AWS::Region" }, "ControllerAMI" ]},
+        "Tags" : [ {"Key" : "Name", "Value" :{ "Fn::Join" : ["",[{ "Ref" : "AWS::StackName" },"Controller"]]}} ],
+    		"InstanceType" : "c3.xlarge",
+    		"EbsOptimized" : "true",
+    		"NetworkInterfaces": [ {
+            "AssociatePublicIpAddress": "false",
+            "DeviceIndex": "0",
+  		    "GroupSet": [{ "Ref" : "DemoSecurityGroupController" }],
+            "SubnetId": { "Ref" : "NSMSubnetID" }}],
+    		"UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+    		"{",
+    		"\"NSM Primary IP\"",":","\"",{"Ref":"NSMIP"},"\"",","," ",
+    		"\"NSM Secondary IP\"",":","\" \"",","," ",
+    		"\"Controller Name\"",":","\"",{"Ref" : "AWS::StackName"},"Controller","\"",","," ",
+    		"\"Controller EIP\"",":","\"","\"",","," ",
+    		"\"Controller Shared Key\"",":","\"",{"Ref":"ControllerSharedSecretKey"},"\"",
+    		"}"
+    		]]}},
+		    "KeyName": { "Ref": "KeyName" }
+       }
+    },
+	   
+
+   "ClusterCreationWaitHandle" : {
+      "Type" : "AWS::CloudFormation::WaitConditionHandle"
+    },
+
+   "ClusterCreationWaitCondition" : {
+      "Type" : "AWS::CloudFormation::WaitCondition",
+      "DependsOn" : "DemoAutoInstance",
+      "Properties" : {
+        "Handle" : {"Ref" : "ClusterCreationWaitHandle"},
+        "Timeout" : "3600"
+      }
+    },
+	
+   "DemoAutoScalingGroup" : {
+	    "DependsOn" : "ClusterCreationWaitCondition",
+		"Type" : "AWS::AutoScaling::AutoScalingGroup",
+		"Properties" : {
+	    "Tags" : [ {
+		   "Key" : "Name", 
+	       "Value" :{ "Fn::Join" : ["",[{ "Ref" : "AWS::StackName" },"Sensor"]]},
+		   "PropagateAtLaunch" : "true"
+	       }],
+        "LaunchConfigurationName" : { "Fn::Join" : ["",[{ "Ref" : "AWS::StackName" },"LaunchConfig"]]},
+        "MinSize" : "1",
+        "MaxSize" : {"Ref" : "MaxSize"},
+	    "VPCZoneIdentifier": [
+          {
+            "Ref": "NSMSubnetID"
+          }
+		  ]
+     }
+   },
+   
+  "DemoIncreaseCapacity" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+	  "DependsOn" : "DemoAutoScalingGroup",
+      "Properties" : {
+      "AdjustmentType" : "ChangeInCapacity",
+      "AutoScalingGroupName" : { "Ref" : "DemoAutoScalingGroup" },
+	  "ScalingAdjustment" : "1"
+        }
+      },
+	
+  "DemoDecreaseCapacity" : {
+     "Type" : "AWS::AutoScaling::ScalingPolicy",
+     "DependsOn" : "DemoAutoScalingGroup",
+     "Properties" : {
+     "AdjustmentType" : "ChangeInCapacity",
+     "AutoScalingGroupName" : { "Ref" : "DemoAutoScalingGroup" },
+	 "ScalingAdjustment" : "-1"
+      }
+    },
+		  
+  "DemoScaleupAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+	  "DependsOn" : "DemoIncreaseCapacity",
+      "Properties": {
+      "AlarmName" : { "Fn::Join" : ["",[{ "Ref" : "AWS::StackName" },"UpperThresholdAlarm"]]},
+      "AlarmDescription": "Scale up if Sensor Metric is greater than the given threshold for given time",
+      "EvaluationPeriods": "1",
+      "Statistic": "Average",
+	  "MetricName": "CPU Utilization",
+	  "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+      "Threshold": {"Ref" : "AlarmThresholdUpper"},
+      "Period": {"Ref" : "AlarmWatchPeriod"},
+      "AlarmActions": [ { "Ref": "DemoIncreaseCapacity" } ],
+	  "Namespace" : "AWS/EC2",
+      "Dimensions": [ {
+         "Name": "AutoScalingGroupName",
+         "Value": { "Ref": "DemoAutoScalingGroup" }
+      } ]
+       }
+    },
+
+ "DemoScaledownAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+	  "DependsOn" : "DemoDecreaseCapacity",
+      "Properties": {
+	  "AlarmName" : { "Fn::Join" : ["",[{ "Ref" : "AWS::StackName" },"LowerThresholdAlarm"]]},
+	  "AlarmDescription": "Scale down if Sensor Metric is less than the given threshold for given time",
+      "EvaluationPeriods": "1",
+      "Statistic": "Average",
+	  "MetricName": "CPU Utilization",
+	  "ComparisonOperator": "LessThanOrEqualToThreshold",
+      "Threshold": {"Ref" : "AlarmThresholdLower"},
+      "Period": {"Ref" : "AlarmWatchPeriod"},
+      "AlarmActions": [ { "Ref": "DemoDecreaseCapacity" } ],
+	  "Namespace" : "AWS/EC2",
+      "Dimensions": [ {
+         "Name": "AutoScalingGroupName",
+         "Value": { "Ref": "DemoAutoScalingGroup" }
+      } ]
+      }
+    }
+   }
+  }
