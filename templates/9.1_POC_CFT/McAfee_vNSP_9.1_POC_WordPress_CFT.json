@@ -1,0 +1,466 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "McAfee Network Security Platform AWS Test Servers Deployment",
+  "Metadata": {
+	"Comment" : "Author: Vivek Stalin (vivek_stalin@mcafee.com). Copyright (c) 2017 McAfee Inc. - All Rights Reserved",  
+    "AWS::CloudFormation::Interface": {
+      "ParameterGroups": [
+        {
+          "Label": {
+            "default": "Network Configurations"
+          },
+          "Parameters": [
+      			"VPCID",
+      			"ProtectedSubnetID",
+				"SecurityGroupID",
+				"CloudAccessKey",
+                "CloudSecretKey"
+          ]
+        },	
+		{
+    		"Label": {
+                "default": "Instance SSH Settings"
+              },
+              "Parameters": [
+          		  "KeyName"
+          		  ]
+        },
+		{
+    		"Label": {
+                "default": "NSP Probe download Settings"
+              },
+              "Parameters": [
+          		  "ManagerPrivateIP",
+				  "ClusterName"
+          		  ]
+        }
+      ],
+      "ParameterLabels": { 
+  		  "VPCID": {
+            "default": "Service VPC"
+          },
+  		  "ProtectedSubnetID": {
+            "default": "Protected Subnet"
+          },
+		  "SecurityGroupID": {
+            "default": "Security Group"
+          },
+		  "CloudAccessKey": {
+            "default": "Cloud Access Key"
+          },
+        "CloudSecretKey": {
+            "default": "Cloud Secret Key"
+		  },
+		 "KeyName":{
+		   "default": "Key Name"
+		 },
+		 "ManagerPrivateIP":{
+		   "default": "Manager IP"
+		 },
+		 "ClusterName":{
+		   "default": "Cluster Name"
+		 }
+        }
+	 }
+  },	
+  "Parameters": {
+   
+	  "VPCID": {
+      "Description": "VPCID of your existing Service VPC",
+      "Type": "AWS::EC2::VPC::Id",
+	   "ConstraintDescription": "must be the ID of an existing VPC"
+	 
+    },
+	  "ProtectedSubnetID": {
+      "Description": "SubnetID of your existing Protected Subnet",
+      "Type": "AWS::EC2::Subnet::Id",
+	   "ConstraintDescription": "must be the ID of an existing Subnet"
+     },
+	 "SecurityGroupID": {
+      "Description": "Existing VPC's SecurityGroupID to be configured for the Test Instances",
+      "Type": "AWS::EC2::SecurityGroup::Id",
+	   "ConstraintDescription": "must be the ID of an existing Subnet"
+     },
+	 "CloudAccessKey": {
+      "Description": "Your AWS Access Key",
+      "Type": "String",
+      "MinLength": "3",
+	  "NoEcho" : "true"
+    },
+    "CloudSecretKey": {
+      "Description": "Your AWS Secret Key",
+      "Type": "String",
+      "MinLength": "3",
+      "NoEcho" : "true"
+    },
+	"KeyName": {
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the EC2 Instance",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription": "must be the name of an existing EC2 KeyPair."
+    },
+	"ManagerPrivateIP": {
+      "Description" : "Input the private IP of the existing NSP Manager. (Eg: 10.30.10.49)",
+	  "Type" : "String",
+      "AllowedPattern": "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$",
+      "ConstraintDescription": "Must be valid IPv4 address: X.X.X.X"
+    },
+	"ClusterName": {
+      "Description" : "Name of the cluster which is configured in the existing NSP Manager",
+      "Type": "String",
+	  "MinLength" : "3"
+    }
+  },
+
+  "Mappings" : {
+    "TemplateMap" : { 
+	
+    "ap-northeast-1": {
+		 "ServerAMI" : "ami-15b89372"
+        },
+    "ap-northeast-2": {
+		"ServerAMI" : "ami-04af616a"
+        },
+	"ap-south-1": {
+		"ServerAMI" : "ami-c95e34a6"
+        },	
+	"ap-southeast-1": {
+		"ServerAMI" : "ami-d6509fb5"
+        },
+	"ap-southeast-2": {
+		"ServerAMI" : "ami-f31c1490"
+        },	
+    "eu-west-2": {
+		"ServerAMI" : "ami-44c7cd20"
+        },
+    "us-west-1": {
+		"ServerAMI" : "ami-9c77c1ef"
+        },
+    "us-west-2": {
+		"ServerAMI" : "ami-e01d8280"
+        },
+    "us-east-1": {
+		"ServerAMI" : "ami-79f66d6f"
+        },	
+    "us-east-2": {
+		"ServerAMI" : "ami-88eeb5ed"
+        }		  
+    }
+  },
+  "Resources" : {
+	  
+    "TestVMSGroup1Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "3306",
+             "FromPort" : "3306",
+             "GroupId": {"Ref": "SecurityGroupID"},
+			 "SourceSecurityGroupId":{ "Ref": "SecurityGroupID" }
+			 }
+         },
+		 
+	"TestVMSGroup2Ingress" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+             "IpProtocol" : "tcp",
+             "ToPort" : "22",
+             "FromPort" : "22",
+             "GroupId": {"Ref": "SecurityGroupID"},
+			 "SourceSecurityGroupId":{ "Ref": "SecurityGroupID" }
+			 }
+         },	 
+		 
+	"DemoWebServerInstance" : {	
+      "Type" : "AWS::EC2::Instance",
+	    "Metadata" : {
+        "AWS::CloudFormation::Init" : {
+        }
+		  },
+      "Properties" : {
+        "ImageId" : { "Fn::FindInMap" : [ "TemplateMap", { "Ref" : "AWS::Region" }, "ServerAMI" ]},
+        "Tags" : [ {"Key" : "Name", "Value" :{ "Fn::Join" : ["",[{ "Ref" : "AWS::StackName" },"WebServer"]]}} ],
+		"InstanceType" : "m4.large",
+		"NetworkInterfaces": [{
+          "AssociatePublicIpAddress": "true",
+          "DeviceIndex": "0",
+  		  "GroupSet": [{ "Ref" : "SecurityGroupID" }],
+          "SubnetId": { "Ref" : "ProtectedSubnetID" }
+          } ],
+		  "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+    	     "#!/bin/sh\n",
+			 "sudo echo \"Downloading and installing dependency packages for installing NSPVirtualProbe\"\n",
+			 "curl  http://169.254.169.254/latest/user-data/\n",
+			 "sudo apt-get update && sudo apt-get upgrade -y\n",	
+			 "sudo apt-get -y install python-setuptools\n",	
+			 "sudo apt-get -y install expect\n",				 
+             "sudo easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\n",
+			 "sudo su - ubuntu\n",
+			 "cd /home/ubuntu\n",
+			 "sudo touch temp1.sh\n",
+		     "sudo chmod 777 /home/ubuntu/*\n",
+			 "inst_Public_ip=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)\n",
+			 "inst_Private_ip=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)\n",
+			 "sudo apt install wordpress -y\n",
+			 "sudo service apache2 reload\n",
+			 "sudo useradd -s /bin/bash -m -d /home/testuser  -g root testuser\n",
+			 "sudo echo -e '#!/usr/bin/expect\\nspawn sudo passwd testuser\\nexpect {\\n\":\" {\\nsend \"test@123$\\\\r\"\\nexp_continue\\n}\\n\"(yes/no)?\" {\\nsend \"yes\\\\r\"\\nexp_continue\\n}\\n}\\nexpect \":\"\\nsend \"","test@123$","\\\\r\"\\nexpect \"$\"\\nsend \"","exit\\\\r\"\\ninteract' > ./temp1.sh\n",
+			 "./temp1.sh\n",
+			 "sudo su -\n",
+			 "sudo echo \"testuser  ALL=(ALL:ALL) ALL\" >> /etc/sudoers\n",
+			 "sudo sed -i '/PasswordAuthentication/s/^/#/' /etc/ssh/sshd_config\n",
+			 "sudo echo \"PasswordAuthentication yes\" >> /etc/ssh/sshd_config\n",
+			 "sudo sed -i '/PubkeyAuthentication/s/^/#/' /etc/ssh/sshd_config\n",
+			 "sudo echo \"PubkeyAuthentication no\" >> /etc/ssh/sshd_config\n",
+			 "sudo /etc/init.d/ssh restart\n",
+			 "sudo echo -e \"Alias /blog /usr/share/wordpress\\n<Directory /usr/share/wordpress>\\n\\tOptions FollowSymLinks\\n\\tAllowOverride Limit Options FileInfo\\n\\tDirectoryIndex index.php\\n\\tOrder allow,deny\\n\\tAllow from all\\n</Directory>\\n<Directory /usr/share/wordpress/wp-content>\\n\\tOptions FollowSymLinks\\n\\tOrder allow,deny\\n\\tAllow from all\\n</Directory>\" > /etc/apache2/sites-available/wordpress.conf\n",
+			 "sudo a2ensite wordpress\n",
+			 "sudo service apache2 reload\n",
+			 "sudo wget"," ","\"","https://",{"Ref" : "ManagerPrivateIP"},"/sdkapi/cloud/cluster/downloadprobeagent?name=",{"Ref":"ClusterName"},"&ostype=linux","\""," --no-check-certificate "," -O "," ","DemoNSPVirtualProbe.tar.gz","\n",
+    		 "sudo tar xzf DemoNSPVirtualProbe.tar.gz","\n",
+    		 "sudo ./install-zlink.sh\n",
+    		 "sleep 30\n",		 
+    		 "for i in $(seq 7)\n",
+             "do\n",
+             "  zasa_status=$(sudo /etc/init.d/zasad status)\n",
+             "  echo \"checking iteartion:$i\"\n",
+    		 "  echo \"zasa status ---> $zasa_status\"\n",
+             "  if [ $i -eq 7 ]\n",
+             "  then\n",
+             "    echo \"Tried for 3mins. Maximum tries reached. Sending Failure signal to CFN and exiting\"\n",
+    		 "    cfn-signal -e 1 --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource ","DemoWebServerInstance",
+    		 "         --region ", { "Ref" : "AWS::Region" },"\n",
+             "    break\n",
+             "  fi\n",
+             "  if echo $zasa_status | grep \"Service is running\"\n",
+             "  then\n",
+             "    echo \"zasa service is up and running, sending success signal to CFN and exiting\"\n",
+    		 "    cfn-signal -e 0 --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource ","DemoWebServerInstance",
+    		 "         --region ", { "Ref" : "AWS::Region" },"\n",
+             "    break\n",
+             "  else\n",
+             "    echo \"zasa service is not started yet.cannot send success signal to CFN\"\n",
+             "    echo \"Time:$i: Sleeping for 30s for service to come up\"\n",
+             "    sleep 30\n",
+             "  fi\n",
+             "done\n",
+			 "sudo rm $0\n"
+    		 ]]}},
+    		
+			 "KeyName": { "Ref": "KeyName" }
+       },
+      "CreationPolicy" : {
+        "ResourceSignal" : {
+	    "Count": "1",
+        "Timeout" : "PT10M"
+        }
+      }
+    },
+	
+	"DemoDBServerInstance" : {
+      "Type" : "AWS::EC2::Instance",
+	    "Metadata" : {
+        "AWS::CloudFormation::Init" : {
+        }
+		  },
+      "Properties" : {
+        "ImageId" : { "Fn::FindInMap" : [ "TemplateMap", { "Ref" : "AWS::Region" }, "ServerAMI" ]},
+        "Tags" : [ {"Key" : "Name", "Value" :{ "Fn::Join" : ["",[{ "Ref" : "AWS::StackName" },"DBServer"]]}} ],
+		"InstanceType" : "m4.large",
+		"NetworkInterfaces": [{
+          "AssociatePublicIpAddress": "true",
+          "DeviceIndex": "0",
+  		  "GroupSet": [{ "Ref" : "SecurityGroupID" }],
+          "SubnetId": { "Ref" : "ProtectedSubnetID" }
+          } ],
+		  "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+    	    "#!/bin/sh\n",
+			 "sudo echo \"Downloading and installing dependency packages for installing NSPVirtualProbe\"\n",
+			 "curl  http://169.254.169.254/latest/user-data/\n",
+			 "sudo apt-get update && sudo apt-get upgrade -y\n",	
+			 "sudo apt-get -y install python-setuptools\n",		
+			 "sudo apt-get -y install expect\n",	 
+             "sudo easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\n",
+			 "sudo su - ubuntu\n",
+			 "cd /home/ubuntu\n",
+			 "sudo touch temp1.sh\n",
+			 "sudo chmod 777 /home/ubuntu/*\n",
+			 "inst_Public_ip=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)\n",
+			 "inst_Private_ip=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)\n",	
+			 "sudo su -\n",		
+			 "sudo apt-get install -y apache2\n",	
+			 "export DEBIAN_FRONTEND=\"noninteractive\"\n",
+			 "sudo echo \"mysql-server mysql-server/root_password password root@123$\" | debconf-set-selections\n",
+			 "sudo echo \"mysql-server mysql-server/root_password_again password root@123$\"| debconf-set-selections\n",
+			 "sudo apt-get install mysql-server -y\n",
+			 "sudo mysql -uroot -proot@123$ -e \"CREATE DATABASE wordpress\"\n",
+			 "sudo mysql -uroot -proot@123$ -e \"GRANT ALL PRIVILEGES ON *.* TO 'wordpress'@'",{ "Fn::GetAtt": ["DemoWebServerInstance", "PrivateIp"]},"' IDENTIFIED BY 'root@123$'; FLUSH PRIVILEGES;\"\n",
+			 "sudo /etc/init.d/mysql stop\n",
+		     "sudo sed -i '/127.0.0.1/s/^/#/' /etc/mysql/my.cnf\n",
+			 "sudo /etc/init.d/mysql start\n",
+             "sudo /etc/init.d/mysql status\n",
+			 "sudo sleep 10\n",
+			 "sudo wget"," ","\"","https://",{"Ref" : "ManagerPrivateIP"},"/sdkapi/cloud/cluster/downloadprobeagent?name=",{"Ref":"ClusterName"},"&ostype=linux","\""," --no-check-certificate "," -O "," ","DemoNSPVirtualProbe.tar.gz","\n",
+    		 "sudo tar xzf DemoNSPVirtualProbe.tar.gz","\n",
+    		 "sudo ./install-zlink.sh\n",
+    		 "sleep 30\n",		 
+    		 "for i in $(seq 7)\n",
+             "do\n",
+             "  zasa_status=$(sudo /etc/init.d/zasad status)\n",
+             "  echo \"checking iteartion:$i\"\n",
+    		 "  echo \"zasa status ---> $zasa_status\"\n",
+             "  if [ $i -eq 7 ]\n",
+             "  then\n",
+             "    echo \"Tried for 3mins. Maximum tries reached. Sending Failure signal to CFN and exiting\"\n",
+    		 "    cfn-signal -e 1 --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource ","DemoDBServerInstance",
+    		 "         --region ", { "Ref" : "AWS::Region" },"\n",
+             "    break\n",
+             "  fi\n",
+             "  if echo $zasa_status | grep \"Service is running\"\n",
+             "  then\n",
+             "    echo \"zasa service is up and running, sending success signal to CFN and exiting\"\n",
+    		 "    cfn-signal -e 0 --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource ","DemoDBServerInstance",
+    		 "         --region ", { "Ref" : "AWS::Region" },"\n",
+             "    break\n",
+             "  else\n",
+             "    echo \"zasa service is not started yet.cannot send success signal to CFN\"\n",
+             "    echo \"Time:$i: Sleeping for 30s for service to come up\"\n",
+             "    sleep 30\n",
+             "  fi\n",
+             "done\n",
+			 "sudo rm $0\n"
+    		 ]]}},
+			 "KeyName": { "Ref": "KeyName" }
+       },
+      "CreationPolicy" : {
+        "ResourceSignal" : {
+	    "Count": "1",
+        "Timeout" : "PT10M"
+        }
+      }
+    },
+	
+	"DemoAutoInstance" : {
+      "Type" : "AWS::EC2::Instance",
+	  "DependsOn" : "DemoWebServerInstance",
+	  "Metadata" : {
+        "AWS::CloudFormation::Init" : {
+          "config" : {
+            "files" : {
+			  "/home/ubuntu/temp1.sh" : {
+                "content" : { "Fn::Join" : ["", [
+				 "#!/usr/bin/expect\n",
+				 "spawn ssh testuser@",{ "Fn::GetAtt": ["DemoWebServerInstance", "PrivateIp"]},"\n",
+				 "expect {\n\"password:\" {\nsend \"test@123$\\r\"\n","exp_continue\n}\n\"(yes/no)?\"\n",
+				 "{\nsend \"yes\\r\"\nexp_continue\n}\n}\nexpect \"$\"\nsend \"",
+				 "sudo su -","\\r\"\nexpect \":\"\nsend \"","test@123$","\\r\"\nexpect \"#\"\nsend \"",
+				 "sudo echo -e \\\"<?php\\n",
+				 "define('DB_NAME', 'wordpress');\\n",
+				 "define('DB_USER', 'wordpress');\\n",
+				 "define('DB_PASSWORD', 'root@123$');\\n",
+				 "define('DB_HOST', '",{ "Fn::GetAtt": ["DemoDBServerInstance", "PrivateIp"]},"');\\n",
+				 "define('WP_CONTENT_DIR', '/usr/share/wordpress/wp-content');\\n",
+				 "?>\\\"",
+				 " > /etc/wordpress/config-",{ "Fn::GetAtt": ["DemoWebServerInstance", "PublicIp"]},".php","\\r\"","\n",
+				 "expect \"#\"\nsend \"",
+				 "sudo cp /etc/wordpress/config-",{ "Fn::GetAtt": ["DemoWebServerInstance", "PublicIp"]},".php","  ",
+				 "/etc/wordpress/config-",{ "Fn::GetAtt": ["DemoWebServerInstance", "PrivateIp"]},".php\\r\"",
+				 "\nexpect \"#\"\nsend \"",
+				 "exit \\r\"","\n",
+				 "interact"
+                  ]]}
+              },
+			  "/home/ubuntu/temp2.sh" : {
+                "content" : { "Fn::Join" : ["", [
+				 "#!/usr/bin/expect\n",
+				 "spawn ssh testuser@",{ "Fn::GetAtt": ["DemoWebServerInstance", "PrivateIp"]},"\n",
+				 "expect {\n\"password:\" {\nsend \"test@123$\\r\"\n","exp_continue\n}\n\"(yes/no)?\"\n",
+				 "{\nsend \"yes\\r\"\nexp_continue\n}\n}\nexpect \"$\"\nsend \"",
+				 "sudo su -","\\r\"\nexpect \":\"\nsend \"","test@123$","\\r\"\nexpect \"#\"\nsend \"",
+				 "sudo sed -i '/PasswordAuthentication/s/^/#/' /etc/ssh/sshd_config\\r\"",
+				 "\nexpect \"#\"\nsend \"",
+				 "sudo echo \\\"PasswordAuthentication no\\\" >> /etc/ssh/sshd_config\\r\"",
+				 "\nexpect \"#\"\nsend \"",
+				 "sudo sed -i '/PubkeyAuthentication/s/^/#/' /etc/ssh/sshd_config\\r\"",
+				 "\nexpect \"#\"\nsend \"",
+				 "sudo echo \\\"PubkeyAuthentication yes\\\" >> /etc/ssh/sshd_config\\r\"",
+				 "\nexpect \"#\"\nsend \"",
+				 "exit \\r\"","\n",
+				 "interact"
+                  ]]}
+              },
+			  "/home/ubuntu/temp3.sh" : {
+                "content" : { "Fn::Join" : ["", [
+				 "#!/usr/bin/expect\n",
+				 "spawn ssh testuser@",{ "Fn::GetAtt": ["DemoWebServerInstance", "PrivateIp"]},"\n",
+				 "expect {\n\"password:\" {\nsend \"test@123$\\r\"\n","exp_continue\n}\n\"(yes/no)?\"\n",
+				 "{\nsend \"yes\\r\"\nexp_continue\n}\n}\nexpect \"$\"\nsend \"",
+				 "sudo su -","\\r\"\nexpect \":\"\nsend \"","test@123$","\\r\"\nexpect \"#\"\nsend \"",
+				 "sudo service ssh restart","\\r\"","\n",
+				 "expect \"#\"\nsend \"",
+				 "exit \\r\"","\n",
+				 "interact"
+                  ]]}
+              }
+			  
+            }
+          }
+        }
+      },
+      "Properties" : {
+		"ImageId" : { "Fn::FindInMap" : [ "TemplateMap", { "Ref" : "AWS::Region" }, "ServerAMI" ]},
+        "Tags" : [ {"Key" : "Name", "Value" :{ "Fn::Join" : ["",[{ "Ref" : "AWS::StackName" },"AutoInstance"]]}} ],
+		"InstanceType" : "t2.micro",
+		"NetworkInterfaces": [{
+          "AssociatePublicIpAddress": "true",
+          "DeviceIndex": "0",
+  		  "GroupSet": [{ "Ref" : "SecurityGroupID" }],
+          "SubnetId": { "Ref" : "ProtectedSubnetID" }
+          } ],
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+		
+		     "#!/bin/sh\n",
+			 "sudo apt-get update && sudo apt-get upgrade -y\n",	
+			 "sudo apt-get -y install python-setuptools\n",
+			 "sudo apt-get -y install expect\n",			 
+			 "sudo easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\n",
+			 "sudo cfn-init -s ", { "Ref" : "AWS::StackName" }," -r DemoAutoInstance"," --region ",{ "Ref" : "AWS::Region" },"\n",
+			 "sudo sleep 10\n",
+			 "sudo su - ubuntu\n",
+			 "cd /home/ubuntu\n",
+			 "sudo chmod 777 /home/ubuntu/*\n",
+			 "./temp1.sh\n",
+			 "sleep 5\n",
+			 "./temp2.sh\n",
+			 "sleep 5\n",
+			 "sleep 5\n",
+			 "./temp3.sh\n",
+			 "cfn-signal -e 0 --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource ","DemoAutoInstance",
+    		 "         --region ", { "Ref" : "AWS::Region" },"\n"
+          ]]}},
+		  "KeyName": { "Ref": "KeyName" }
+       },
+	  "CreationPolicy" : {
+        "ResourceSignal" : {
+	    "Count": "1",
+        "Timeout" : "PT10M"
+		 }
+		}
+	  }
+	},
+	
+  "Outputs" : {
+    "WebServerDetails" : {
+    "Description": "Web Server IP",  
+    "Value" : { "Fn::GetAtt": ["DemoWebServerInstance", "PublicIp"]}
+    },
+    "DBServerDetails" : {
+    "Description": "DB Server IP(Private)",  
+    "Value" : { "Fn::GetAtt": ["DemoDBServerInstance", "PrivateIp"]}
+    }
+   }
+  }
